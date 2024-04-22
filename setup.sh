@@ -27,22 +27,22 @@ then
   exit;
 fi
 
-echo "Installing / Updating Foundry..."
-if ! command -v foundryup &> /dev/null
-then
-  echo "Installing foundryup..."
-  curl -L https://foundry.paradigm.xyz | bash
+# echo "Installing / Updating Foundry..."
+# if ! command -v foundryup &> /dev/null
+# then
+#   echo "Installing foundryup..."
+#   curl -L https://foundry.paradigm.xyz | bash
 
-  FOUNDRY_BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
-  FOUNDRY_BIN_DIR="$FOUNDRY_BASE_DIR/.foundry/bin"
-  export PATH="$FOUNDRY_BIN_DIR:$PATH"
-fi
+#   FOUNDRY_BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
+#   FOUNDRY_BIN_DIR="$FOUNDRY_BASE_DIR/.foundry/bin"
+#   export PATH="$FOUNDRY_BIN_DIR:$PATH"
+# fi
 
-if ! command -v forge &> /dev/null || [ ! "$(forge -V | grep -Eo '\b\w{7}\b')" = "2cf84d9" ]
-then
-  echo "Installing foundry at $FOUNDRY_VERSION..."
-  foundryup --version $FOUNDRY_VERSION
-fi
+# if ! command -v forge &> /dev/null || [ ! "$(forge -V | grep -Eo '\b\w{7}\b')" = "2cf84d9" ]
+# then
+#   echo "Installing foundry at $FOUNDRY_VERSION..."
+#   foundryup --version $FOUNDRY_VERSION
+# fi
 
 echo "Updating git submodules..."
 git submodule update --init --recursive
