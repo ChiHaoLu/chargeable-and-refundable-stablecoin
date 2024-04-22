@@ -61,7 +61,7 @@ const hardhatConfig: HardhatUserConfig = {
   },
   defaultNetwork: "hardhat",
   networks: {
-    hardhat: {},
+    hardhat: { allowUnlimitedContractSize: true },
     testnet: {
       url: process.env.TESTNET_RPC_URL || "",
       gasMultiplier,

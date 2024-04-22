@@ -32,6 +32,138 @@ import { EIP712 } from "../util/EIP712.sol";
  * @notice ERC20 Token backed by fiat reserves, version 2.2
  */
 contract FiatTokenV2_2 is FiatTokenV2_1 {
+    /** New Features */
+    address public vault = address(0);
+    address public burner = address(0);
+
+    modifier onlyVaultSet() {
+        require(vault != address(0), "The vault has not set");
+        _;
+    }
+
+    modifier onlyBurnerSet() {
+        require(burner != address(0), "The burner has not set");
+        _;
+    }
+
+    function setVault(address _vault) public whenNotPaused onlyOwner {
+        vault = _vault;
+    }
+
+    function setBurner(address _burner) public whenNotPaused onlyOwner {
+        burner = _burner;
+    }
+
+    // When customer is shopping
+    // - He/She should pay to merchant and be charged fee to service vault
+    function transferWithAuthorizationAndCharge(
+        // params for transfer from customer to merchant
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        bytes memory signature,
+        // params for transfer from customer to vault
+        uint256 valueForService,
+        bytes memory signatureForService
+    )
+        external
+        whenNotPaused
+        notBlacklisted(from)
+        notBlacklisted(to)
+        onlyVaultSet
+    {
+        // transfer from customer to merchant
+        _transferWithAuthorization(
+            from,
+            to,
+            value,
+            validAfter,
+            validBefore,
+            nonce,
+            signature
+        );
+        // transfer from customer to vault
+        _transferWithAuthorization(
+            from,
+            vault,
+            valueForService,
+            validAfter,
+            validBefore,
+            nonce,
+            signatureForService
+        );
+    }
+
+    // When merchant is refunding,
+    // 1. He/She should transfer to customer
+    // 2. Service vault should transfer the fee which the customer paid back
+    function transferWithAuthorizationAndFeeRefund(
+        // params for transfer from customer to merchant
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        bytes memory signature,
+        // params for transfer from customer to vault
+        uint256 valueForFeeRefund,
+        bytes memory signatureForFeeRefund
+    )
+        external
+        whenNotPaused
+        notBlacklisted(from)
+        notBlacklisted(to)
+        onlyVaultSet
+    {
+        // transfer from merchant to customer
+        _transferWithAuthorization(
+            from,
+            to,
+            value,
+            validAfter,
+            validBefore,
+            nonce,
+            signature
+        );
+        // transfer from vault to customer
+        _transferWithAuthorization(
+            vault,
+            to,
+            valueForFeeRefund,
+            validAfter,
+            validBefore,
+            nonce,
+            signatureForFeeRefund
+        );
+    }
+
+    // Burn: user wants to withdraw with fiat, hence we need to burn the stablecoin
+    // 1. use `transferWithAuthorization` to transfer from user to burner
+    // 2. call the `burn` by masterMinter in period
+    function burnByService(
+        address from,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        bytes memory signature
+    ) external whenNotPaused onlyBurnerSet {
+        // transfer from customer to burnWarehouse
+        _transferWithAuthorization(
+            from,
+            burner,
+            value,
+            validAfter,
+            validBefore,
+            nonce,
+            signature
+        );
+    }
+
     /**
      * @notice Initialize v2.2
      * @param accountsToBlacklist   A list of accounts to migrate from the old blacklist

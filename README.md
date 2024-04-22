@@ -28,7 +28,7 @@ $ yarn install          # Install npm packages and other dependencies listed in 
 Run all tests:
 
 ```sh
-$ yarn test # or yarn test [path/to/file]
+$ yarn test test/v2/FiatTokenV2_2.test.ts
 ```
 
 ## Deployment
@@ -52,7 +52,7 @@ echo "[]" > blacklist.remote.json
 3. Simulate a deployment by running the following command
 
 ```sh
-yarn forge:simulate scripts/deploy/deploy-fiat-token.s.sol --rpc-url <testnet OR mainnet>
+yarn forge:simulate scripts/deploy/deploy-fiat-token.s.sol --rpc-url <testnet_alias>
 ```
 
 4. Validate that all transactions to be broadcasted are filled in with the
@@ -60,12 +60,26 @@ yarn forge:simulate scripts/deploy/deploy-fiat-token.s.sol --rpc-url <testnet OR
 5. Deploy the contracts by running the following command
 
 ```sh
-yarn forge:broadcast scripts/deploy/deploy-fiat-token.s.sol --rpc-url <testnet OR mainnet>
+yarn forge:broadcast scripts/deploy/deploy-fiat-token.s.sol --rpc-url <testnet_alias>
 ```
 
 6. Verify the contracts on an Etherscan flavored block explorer by running the
    following command. Ensure that `ETHERSCAN_KEY` is set in the `.env` file.
 
 ```sh
-yarn forge:verify scripts/deploy/deploy-fiat-token.s.sol --rpc-url <testnet OR mainnet>
+yarn forge:verify scripts/deploy/deploy-fiat-token.s.sol --rpc-url <testnet_alias>
+```
+
+7. Set the burner and vault!
+
+## Setting
+
+If needed, set the master minter:
+
+```
+Caller: owner (0x8Fc8ecf8A75877E51aa595Bb1a02CF3804b24613)
+Function: updateMasterMinter(address _newMasterMinter)
+
+MethodID: 0xaa20e1e4
+[0]:  000000000000000000000000ec42a0817a89bb41be4184fb5c3bb146fd625f84
 ```
