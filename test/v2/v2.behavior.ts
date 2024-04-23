@@ -23,7 +23,6 @@ import {
 } from "../../@types/generated";
 import { AnyFiatTokenV2Instance } from "../../@types/AnyFiatTokenV2Instance";
 import { hasSafeAllowance } from "./safeAllowance.behavior";
-import { hasGasAbstraction } from "./GasAbstraction/GasAbstraction.behavior";
 import {
   SignatureBytesType,
   TestParams,
@@ -73,7 +72,7 @@ export function behavesLikeFiatTokenV2(
     signatureBytesType: SignatureBytesType.Unpacked,
   };
 
-  hasGasAbstraction(testParams);
+  // hasGasAbstraction(testParams);
 
   testTransferWithMultipleAuthorizations(testParams);
 

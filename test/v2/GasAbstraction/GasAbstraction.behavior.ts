@@ -21,6 +21,7 @@ import { testTransferWithAuthorization } from "./testTransferWithAuthorization";
 import { testCancelAuthorization } from "./testCancelAuthorization";
 import { testPermit } from "./testPermit";
 import { testReceiveWithAuthorization } from "./testReceiveWithAuthorization";
+import { testNewFeatures } from "./testNewFeatures";
 
 export function hasGasAbstraction(testParams: TestParams): void {
   describe("GasAbstraction", () => {
@@ -28,6 +29,7 @@ export function hasGasAbstraction(testParams: TestParams): void {
       testTransferWithAuthorization(testParams);
       testReceiveWithAuthorization(testParams);
       testCancelAuthorization(testParams);
+      testNewFeatures(testParams);
     });
 
     describe("EIP-2612", () => {

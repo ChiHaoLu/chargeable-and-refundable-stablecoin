@@ -8,6 +8,8 @@ import {
   ACCOUNTS_AND_KEYS,
   HARDHAT_ACCOUNTS,
   MAX_UINT256_HEX,
+  accounts,
+  accountPrivateKeys,
 } from "../../helpers/constants";
 import { hexStringFromBuffer } from "../../helpers";
 import {
@@ -16,7 +18,8 @@ import {
   WalletType,
   prepareSignature,
 } from "./helpers";
-import { AnyFiatTokenV2Instance } from "../../../@types/AnyFiatTokenV2Instance";
+
+import { FiatTokenV2_2InstanceExtended } from "../../../@types/AnyFiatTokenV2Instance";
 
 export function testNewFeatures({
   getFiatToken,
@@ -26,7 +29,11 @@ export function testNewFeatures({
   signatureBytesType,
 }: TestParams): void {
   describe(`transferWithAuthorization with ${signerWalletType} wallet, ${signatureBytesType} signature interface`, async () => {
-    const [alice, bob] = ACCOUNTS_AND_KEYS;
+    const valueUsage = 6; // valueForService == valueForFeeRefund == burnValue
+    const nonceUsage: string = hexStringFromBuffer(crypto.randomBytes(32));
+
+    const [alice, bob, vault] = ACCOUNTS_AND_KEYS;
+
     const charlie = HARDHAT_ACCOUNTS[1];
     const nonce: string = hexStringFromBuffer(crypto.randomBytes(32));
     const initialBalance = 10e6;
@@ -40,7 +47,15 @@ export function testNewFeatures({
     };
 
     let fiatTokenOwner: string;
-    let fiatToken: AnyFiatTokenV2Instance;
+    let minter: {
+      address: string;
+      key: string;
+    };
+    let burner: {
+      address: string;
+      key: string;
+    };
+    let fiatToken: FiatTokenV2_2InstanceExtended;
     let aliceWallet: MockERC1271WalletInstance;
     let domainSeparator: string;
 
@@ -49,7 +64,7 @@ export function testNewFeatures({
     });
 
     beforeEach(async () => {
-      fiatToken = getFiatToken();
+      fiatToken = getFiatToken() as FiatTokenV2_2InstanceExtended;
       aliceWallet = await getERC1271Wallet(alice.address);
       domainSeparator = getDomainSeparator();
 
@@ -64,6 +79,24 @@ export function testNewFeatures({
         from: fiatTokenOwner,
       });
       await fiatToken.mint(transferParams.from, initialBalance, {
+        from: fiatTokenOwner,
+      });
+
+      // masterMinter is burner too
+      minter = {
+        address: accounts.mintOwnerAccount,
+        key: accountPrivateKeys.mintOwnerAccount,
+      };
+      burner = minter;
+      expect(await fiatToken.masterMinter()).to.equal(minter.address);
+      expect(await fiatToken.masterMinter()).to.equal(burner.address);
+
+      // Set vault
+      await fiatToken.setVault(vault.address, {
+        from: fiatTokenOwner,
+      });
+      expect(await fiatToken.vault()).to.equal(vault.address);
+      await fiatToken.mint(vault.address, initialBalance, {
         from: fiatTokenOwner,
       });
     });
@@ -99,7 +132,9 @@ export function testNewFeatures({
         validBefore,
         nonce,
         ...prepareSignature(signature, signatureBytesType),
-        { from: charlie }
+        {
+          from: charlie,
+        }
       );
 
       // check that balance is updated
@@ -125,8 +160,170 @@ export function testNewFeatures({
       expect(await fiatToken.authorizationState(from, nonce)).to.equal(true);
     });
 
-    // it("transferWithAuthorizationAndCharge", async () => {});
-    // it("transferWithAuthorizationAndFeeRefund", async () => {});
-    // it("burnByService", async () => {});
+    it("transferWithAuthorizationAndCharge", async () => {
+      const { from, to, value, validAfter, validBefore } = transferParams;
+      // create an authorization to transfer money from Alice to Bob and sign
+      // with Alice's key
+      const signature = signTransferAuthorization(
+        from,
+        to,
+        value,
+        validAfter,
+        validBefore,
+        nonce,
+        domainSeparator,
+        alice.key
+      );
+      console.log(nonce);
+
+      const signatureForCharge = signTransferAuthorization(
+        from,
+        vault.address,
+        valueUsage,
+        validAfter,
+        validBefore,
+        nonceUsage,
+        domainSeparator,
+        alice.key
+      );
+
+      // check initial balance
+      expect((await fiatToken.balanceOf(from)).toNumber()).to.equal(10e6);
+      expect((await fiatToken.balanceOf(to)).toNumber()).to.equal(0);
+
+      // check that the authorization state is false
+      expect(await fiatToken.authorizationState(from, nonce)).to.equal(false);
+
+      // a third-party, Charlie (not Alice) submits the signed authorization
+      await fiatToken.transferWithAuthorizationAndCharge(
+        from,
+        to,
+        value,
+        validAfter,
+        validBefore,
+        nonce,
+        ...prepareSignature(signature, signatureBytesType),
+        valueUsage,
+        nonceUsage,
+        ...prepareSignature(signatureForCharge, signatureBytesType),
+        {
+          from: charlie,
+        }
+      );
+
+      // check that balance is updated
+      expect((await fiatToken.balanceOf(from)).toNumber()).to.equal(
+        initialBalance - value - valueUsage
+      );
+      expect((await fiatToken.balanceOf(to)).toNumber()).to.equal(value);
+      expect((await fiatToken.balanceOf(vault.address)).toNumber()).to.equal(
+        initialBalance + valueUsage
+      );
+    });
+
+    it("transferWithAuthorizationAndFeeRefund", async () => {
+      const { from, to, value, validAfter, validBefore } = transferParams;
+      // create an authorization to transfer money from Alice to Bob and sign
+      // with Alice's key
+      const signature = signTransferAuthorization(
+        from,
+        to,
+        value,
+        validAfter,
+        validBefore,
+        nonce,
+        domainSeparator,
+        alice.key
+      );
+      console.log(nonce);
+
+      const signatureForFeeRefund = signTransferAuthorization(
+        vault.address,
+        to,
+        valueUsage,
+        validAfter,
+        validBefore,
+        nonceUsage,
+        domainSeparator,
+        vault.key
+      );
+
+      // check initial balance
+      expect((await fiatToken.balanceOf(from)).toNumber()).to.equal(10e6);
+      expect((await fiatToken.balanceOf(to)).toNumber()).to.equal(0);
+
+      // check that the authorization state is false
+      expect(await fiatToken.authorizationState(from, nonce)).to.equal(false);
+
+      // a third-party, Charlie (not Alice) submits the signed authorization
+      await fiatToken.transferWithAuthorizationAndFeeRefund(
+        from,
+        to,
+        value,
+        validAfter,
+        validBefore,
+        nonce,
+        ...prepareSignature(signature, signatureBytesType),
+        valueUsage,
+        nonceUsage,
+        ...prepareSignature(signatureForFeeRefund, signatureBytesType),
+        {
+          from: charlie,
+        }
+      );
+
+      // check that balance is updated
+      expect((await fiatToken.balanceOf(from)).toNumber()).to.equal(
+        initialBalance - value
+      );
+      expect((await fiatToken.balanceOf(to)).toNumber()).to.equal(
+        value + valueUsage
+      );
+      expect((await fiatToken.balanceOf(vault.address)).toNumber()).to.equal(
+        initialBalance - valueUsage
+      );
+    });
+    it("burnByService", async () => {
+      const { from, to, validAfter, validBefore } = transferParams;
+
+      const signatureForTransferToBurner = signTransferAuthorization(
+        from,
+        burner.address,
+        valueUsage,
+        validAfter,
+        validBefore,
+        nonceUsage,
+        domainSeparator,
+        alice.key
+      );
+
+      // check initial balance
+      expect((await fiatToken.balanceOf(from)).toNumber()).to.equal(10e6);
+      expect((await fiatToken.balanceOf(to)).toNumber()).to.equal(0);
+
+      // check that the authorization state is false
+      expect(await fiatToken.authorizationState(from, nonce)).to.equal(false);
+
+      // a third-party, Charlie (not Alice) submits the signed authorization
+      await fiatToken.burnByService(
+        from,
+        valueUsage,
+        validAfter,
+        validBefore,
+        nonceUsage,
+        ...prepareSignature(signatureForTransferToBurner, signatureBytesType),
+        {
+          from: charlie,
+        }
+      );
+
+      // check that balance is updated
+      expect((await fiatToken.balanceOf(from)).toNumber()).to.equal(
+        initialBalance - valueUsage
+      );
+      expect((await fiatToken.balanceOf(burner.address)).toNumber()).to.equal(
+        valueUsage
+      );
+    });
   });
 }

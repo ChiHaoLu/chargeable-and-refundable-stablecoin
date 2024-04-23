@@ -23,6 +23,15 @@ $ yarn install          # Install npm packages and other dependencies listed in 
 
 ## Development
 
+### Types
+
+Types are automatically generated as a part of contract compilation:
+
+```shell
+$ yarn compile
+$ yarn hardhat typechain
+```
+
 ### Testing
 
 Run all tests:

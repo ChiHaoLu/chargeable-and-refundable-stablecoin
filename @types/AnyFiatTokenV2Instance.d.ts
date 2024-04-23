@@ -25,6 +25,9 @@ export interface FiatTokenV2_2InstanceExtended extends FiatTokenV2_2Instance {
   transferWithAuthorization?: typeof FiatTokenV2Instance.transferWithAuthorization;
   receiveWithAuthorization?: typeof FiatTokenV2Instance.receiveWithAuthorization;
   cancelAuthorization?: typeof FiatTokenV2Instance.cancelAuthorization;
+  transferWithAuthorizationAndCharge;
+  transferWithAuthorizationAndFeeRefund;
+  burnByService;
 }
 
 export type AnyFiatTokenV2Instance =

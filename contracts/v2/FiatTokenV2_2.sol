@@ -34,24 +34,14 @@ import { EIP712 } from "../util/EIP712.sol";
 contract FiatTokenV2_2 is FiatTokenV2_1 {
     /** New Features */
     address public vault = address(0);
-    address public burner = address(0);
 
     modifier onlyVaultSet() {
         require(vault != address(0), "The vault has not set");
         _;
     }
 
-    modifier onlyBurnerSet() {
-        require(burner != address(0), "The burner has not set");
-        _;
-    }
-
     function setVault(address _vault) public whenNotPaused onlyOwner {
         vault = _vault;
-    }
-
-    function setBurner(address _burner) public whenNotPaused onlyOwner {
-        burner = _burner;
     }
 
     // When customer is shopping
@@ -67,9 +57,10 @@ contract FiatTokenV2_2 is FiatTokenV2_1 {
         bytes memory signature,
         // params for transfer from customer to vault
         uint256 valueForService,
+        bytes32 nonceForService,
         bytes memory signatureForService
     )
-        external
+        public
         whenNotPaused
         notBlacklisted(from)
         notBlacklisted(to)
@@ -92,7 +83,7 @@ contract FiatTokenV2_2 is FiatTokenV2_1 {
             valueForService,
             validAfter,
             validBefore,
-            nonce,
+            nonceForService,
             signatureForService
         );
     }
@@ -111,9 +102,10 @@ contract FiatTokenV2_2 is FiatTokenV2_1 {
         bytes memory signature,
         // params for transfer from customer to vault
         uint256 valueForFeeRefund,
+        bytes32 nonceForFeeRefund,
         bytes memory signatureForFeeRefund
     )
-        external
+        public
         whenNotPaused
         notBlacklisted(from)
         notBlacklisted(to)
@@ -136,7 +128,7 @@ contract FiatTokenV2_2 is FiatTokenV2_1 {
             valueForFeeRefund,
             validAfter,
             validBefore,
-            nonce,
+            nonceForFeeRefund,
             signatureForFeeRefund
         );
     }
@@ -151,11 +143,11 @@ contract FiatTokenV2_2 is FiatTokenV2_1 {
         uint256 validBefore,
         bytes32 nonce,
         bytes memory signature
-    ) external whenNotPaused onlyBurnerSet {
+    ) public whenNotPaused {
         // transfer from customer to burnWarehouse
         _transferWithAuthorization(
             from,
-            burner,
+            masterMinter,
             value,
             validAfter,
             validBefore,
