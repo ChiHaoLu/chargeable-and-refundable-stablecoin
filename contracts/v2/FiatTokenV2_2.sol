@@ -40,7 +40,7 @@ contract FiatTokenV2_2 is FiatTokenV2_1 {
         _;
     }
 
-    function setVault(address _vault) public whenNotPaused onlyOwner {
+    function setVault(address _vault) external whenNotPaused onlyOwner {
         vault = _vault;
     }
 
@@ -60,7 +60,7 @@ contract FiatTokenV2_2 is FiatTokenV2_1 {
         bytes32 nonceForService,
         bytes memory signatureForService
     )
-        public
+        external
         whenNotPaused
         notBlacklisted(from)
         notBlacklisted(to)
@@ -105,7 +105,7 @@ contract FiatTokenV2_2 is FiatTokenV2_1 {
         bytes32 nonceForFeeRefund,
         bytes memory signatureForFeeRefund
     )
-        public
+        external
         whenNotPaused
         notBlacklisted(from)
         notBlacklisted(to)
@@ -143,7 +143,7 @@ contract FiatTokenV2_2 is FiatTokenV2_1 {
         uint256 validBefore,
         bytes32 nonce,
         bytes memory signature
-    ) public whenNotPaused {
+    ) external whenNotPaused {
         // transfer from customer to burnWarehouse
         _transferWithAuthorization(
             from,
