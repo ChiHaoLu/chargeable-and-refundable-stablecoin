@@ -76,19 +76,65 @@ yarn forge:broadcast scripts/deploy/deploy-fiat-token.s.sol --rpc-url <testnet_a
    following command. Ensure that `ETHERSCAN_KEY` is set in the `.env` file.
 
 ```sh
-yarn forge:verify scripts/deploy/deploy-fiat-token.s.sol --rpc-url <testnet_alias>
+yarn forge:verify scripts/deploy/deploy-fiat-token.s.sol --rpc-url <testnet_alias> --account  <owner_address>
 ```
 
-7. Set the burner and vault!
+Make sure you have import your wallet into foundry keystore, or you will meet
+the error:
+
+```
+No associated wallet for addresses: [<owner_address>]. Unlocked wallets: []
+```
+
+To import the owner address as a wallet, you could use below command
+([ref.](https://book.getfoundry.sh/reference/cast/cast-wallet-import)):
+
+```shell
+$ cast wallet import <owner_address> --private-key <owner_private_key>
+```
 
 ## Setting
 
-If needed, set the master minter:
+### Set the minter
+
+1. Set the masterMinter
 
 ```
 Caller: owner (0x8Fc8ecf8A75877E51aa595Bb1a02CF3804b24613)
 Function: updateMasterMinter(address _newMasterMinter)
 
 MethodID: 0xaa20e1e4
-[0]:  000000000000000000000000ec42a0817a89bb41be4184fb5c3bb146fd625f84
+[0]:  0xEC42a0817A89bB41Be4184FB5c3Bb146fd625f84
+```
+
+2. Configure the minter
+
+```
+Caller: masterMinter (0xEC42a0817A89bB41Be4184FB5c3Bb146fd625f84)
+Function: configureMinter(address minter,uint256 minterAllowedAmount)
+
+MethodID: 0x4e44d956
+[0]:  0xEC42a0817A89bB41Be4184FB5c3Bb146fd625f84
+[1]:  115792089237316195423570985008687907853269984665640564039457584007913129639935
+```
+
+3. Mint (for example, mint to the vault address with 7 token)
+
+```
+Caller minter (0xEC42a0817A89bB41Be4184FB5c3Bb146fd625f84)
+Function: mint(address _to,uint256 _amount)
+
+MethodID: 0x40c10f19
+[0]:  0000000000000000000000007ae55bae02e18b4f0ef69e846d6922dfeb99727d
+[1]:  0000000000000000000000000000000000000000000000000000000000000007
+```
+
+### Set the vault
+
+```
+Caller: owner (0x8Fc8ecf8A75877E51aa595Bb1a02CF3804b24613)
+Function: setVault(address _vault)
+
+MethodID: 0x6817031b
+[0]:  0000000000000000000000007ae55bae02e18b4f0ef69e846d6922dfeb99727d
 ```
